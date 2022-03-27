@@ -143,10 +143,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="udp_server.cpp" />
+    <ClCompile Include="User.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Constants.h" />
+    <ClInclude Include="GameObject.h" />
+    <ClInclude Include="geometry_typedef.h" />
     <ClInclude Include="User.h" />
     <ClInclude Include="udp_server.h" />
   </ItemGroup>

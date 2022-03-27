@@ -1,9 +1,6 @@
-
 #include <iostream>
 #include "udp_server.h"
-
-#define server_port 13
-#define tick_rate 30
+#include "Constants.h"
 
 int main()
 {

@@ -1,28 +1,33 @@
 #pragma once
 #include<iostream>
 #include<boost/asio.hpp>
-
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/point.hpp>
-#include <boost/geometry/geometries/box.hpp>
-
-#include <boost/geometry/index/rtree.hpp>
-
-// to store queries results
-#include <vector>
-
-
-namespace bg = boost::geometry;
-namespace bgi = boost::geometry::index;
-
-typedef bg::model::point<float, 2, bg::cs::cartesian> point;
-typedef bg::model::box<point> box;
-typedef std::pair<box, unsigned> value;
+#include "GameObject.h"
+#include "geometry_typedef.h"
 
 using boost::asio::ip::udp;
 
 class User {
+
+public:
+	User(udp::endpoint* endpoint_a, udp::socket* socket_a) :endpoint(endpoint_a), socket(socket_a)
+	{
+
+	}
+
+	~User() {
+		std::cout << "Deleting user" << std::endl;
+	}
+
+	void getPositionFromClient(point_t new_position) {
+		character.setPosition(new_position);
+	}
+
+	udp::endpoint get_endpoint();
+	void send_data(boost::asio::mutable_buffer data);
+
 private:
 	udp::endpoint* endpoint;
+	udp::socket* socket;
+	GameObject character;
 
 };
