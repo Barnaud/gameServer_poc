@@ -11,16 +11,14 @@ class User {
 public:
 	User(udp::endpoint* endpoint_a, udp::socket* socket_a) :endpoint(endpoint_a), socket(socket_a)
 	{
-
+		std::cout << "Creating user" << std::endl;
 	}
 
 	~User() {
 		std::cout << "Deleting user" << std::endl;
 	}
 
-	void getPositionFromClient(point_t new_position) {
-		character.setPosition(new_position);
-	}
+	void setCharacterPosition(point_t new_position);
 
 	udp::endpoint get_endpoint();
 	void send_data(boost::asio::mutable_buffer data);

@@ -2,16 +2,30 @@
 #include "Constants.h"
 
 std::vector<GameObject*> GameObject::gameObjects;
+unsigned int GameObject::max_uid = 0;
 
 GameObject::GameObject() {
+	std::cout << "Creating GameObject" << std::endl;
+	uid = ++max_uid;
+	position = point_t(0, 0, 0);
+	trajectory = linestring_t();
 	gameObjects.push_back(this);
+
+	//GameObject(point_t(0, 0, 0), linestring_t());
 }
 GameObject::GameObject(point_t position_a) : position(position_a)
 {
+	std::cout << "Creating GameObject" << std::endl;
+	uid = ++max_uid;
+	trajectory = linestring_t();
 	gameObjects.push_back(this);
+	//GameObject(position_a, linestring_t());
+
 }
 GameObject::GameObject(point_t position_a, linestring_t trajectory_a) : position(position_a), trajectory(trajectory_a)
 {
+	std::cout << "Creating GameObject" << std::endl;
+	uid = ++max_uid;
 	gameObjects.push_back(this);
 }
 GameObject::~GameObject() {
@@ -32,6 +46,10 @@ void GameObject::setPosition(point_t new_position) {
 point_t GameObject::getPosition() {
 
 	return position;
+}
+
+unsigned int GameObject::getUid() {
+	return uid;
 }
 
 void GameObject::moveOneTick() {
