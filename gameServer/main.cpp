@@ -2,8 +2,12 @@
 #include "udp_server.h"
 #include "Constants.h"
 
+
+
+
 int main()
 {
+
     std::cout << "Starting gameserver" << std::endl;
     try {
         udp_server my_server(server_port);

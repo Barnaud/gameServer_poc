@@ -19,6 +19,7 @@ public:
 	}
 
 	void setCharacterPosition(point_t new_position);
+	void setCharacterTrajectory(linestring_t new_trajectory);
 
 	udp::endpoint get_endpoint();
 	void send_data(boost::asio::mutable_buffer data);

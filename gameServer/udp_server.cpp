@@ -5,12 +5,27 @@
 #include <thread>
 #include "GameObject.h"
 #include <boost/bind/bind.hpp>
+#include "sleep.h"
+
 
 
 //implement lock on user list read/write (orchestrate/readUsers)
 //implement lock on gameobject position/trajectory
 
-using std::chrono::operator""ms;
+/*
+	Data format : requestType[1], {data}
+	resquestType = 1: User login
+	requestType = 2: get RTT (server request and response):
+	clientTimestamp[8]
+	requestType = 3: Sending server-computed gameState
+	tick_id[1], gameObjectId[4], x[4], y[4], z[4] => buffer size = (gameObjects.size() * 4) + 1
+
+*/
+
+
+//using std::chrono::operator""ms;
+
+typedef std::chrono::duration<int, std::milli> milliseconds_type;
 
 
 udp_server::udp_server(int port) {
@@ -29,36 +44,10 @@ void udp_server::start_listening() {
 	std::cout << "Listening to incoming connexions" << std::endl;
 	try {
 		start_socket_receive();
-		//std::async(std::launch::async, orchestrate_object_movements);
 		f_orchestration = std::async(std::launch::async, orchestrate_object_movements, this);
 		std::cout << "Started orchestration" << std::endl;
 		this->context.run();
 		std::cout << "After run" << std::endl;
-		//udp::endpoint previous_endpoint;
-		//auto tickStartTime = std::chrono::steady_clock::now();
-		//	
-		//this->socket->receive_from(boost::asio::buffer(this->receive_buffer), receive_endpoint);
-		///*if (!this->endpoint_map[receive_endpoint]) {
-		//	std::cout << "A new client connected, assigning it id: " << std::endl;
-		//}*/
-		//std::cout << "got data from endpoint: " << receive_endpoint << "Previous endpoint: " << previous_endpoint<< std::endl;
-		//for (int i = 0; i < 3; i++) {
-		//	std::cout << "data " << i << ": " << (int) receive_buffer[i] << std::endl;
-		//}
-		//if(findUserByEndpoint(receive_endpoint)){
-		//	std::cout << "found user" << std::endl;
-		//}
-		//else {
-		//	std::cout << "A new user logged in and was added to" << std::endl;
-		//	logUser(receive_endpoint, *this->socket);
-		//}
-		/*GameObject::moveAllObjectsOneTick();
-		boost::asio::mutable_buffer dataToSend = generateDataToSend();
-		for (User oneUser : users) {
-			oneUser.send_data(dataToSend);
-		}
-		std::this_thread::sleep_until(tickStartTime + 1000ms);
-		std::cout << "one loop passed" << std::endl;*/
 	}
 	catch (std::exception& error) {
 		std::cerr << "Error while listening connexions: " << error.what() << std::endl;
@@ -71,32 +60,69 @@ void udp_server::start_socket_receive() {
 
 }
 
+void udp_server::route_received_data() {
+	if (receive_buffer && receive_buffer[0]) {
+		switch (receive_buffer[0])
+		{
+		case 1:
+		{
+			//LogUser
+			if (findUserByEndpoint(receive_endpoint)) {
+				//std::cout << "found user" << std::endl;
+				std::cout << "Trying to re-log already existing user. Ignoring...";
+			}
+			else {
+				std::cout << "A new user logged in and was added" << std::endl;
+				logUser(receive_endpoint, *this->socket);
+			}
+		}
+		case 2:
+		{
+			auto serverTime = std::chrono::system_clock::now();
+			//auto serverTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(serverTime.time_since_epoch()).count();
+			long long serverTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(serverTime.time_since_epoch()).count();
+
+			//int serverTimeBuffer[1] = { serverTimeMs };
+			std::cout << "Pause" << std::endl;
+			this->socket->send_to(boost::asio::buffer({serverTimeMs}), this->receive_endpoint);
+		}
+		default:
+			std::cout << "Received unknown request type (" <<receive_buffer[0]<< ").ignoring..." << std::endl;
+			break;
+		}
+	}
+	else {
+		std::cout << "Received empty buffer. Ignoring...";
+	}
+
+}
+
 void udp_server::on_socket_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
 	if (!error) {
 
-		std::cout << "got data from endpoint: " << receive_endpoint << std::endl;
-		for (int i = 0; i < 3; i++) {
-			std::cout << "data " << i << ": " << (int)receive_buffer[i] << std::endl;
-		}
-		if (findUserByEndpoint(receive_endpoint)) {
-			std::cout << "found user" << std::endl;
-		}
-		else {
-			std::cout << "A new user logged in and was added" << std::endl;
-			logUser(receive_endpoint, *this->socket);
-		}
+		//DEBUG: Read receivedData
+		////std::cout << "got data from endpoint: " << receive_endpoint << std::endl;
+		//for (int i = 0; i < 3; i++) {
+		//	//std::cout << "data " << i << ": " << (int)receive_buffer[i] << std::endl;
+		//}
+		route_received_data();
 		udp_server::start_socket_receive();
 	}
 
 }
 
 void udp_server::orchestrate_object_movements(udp_server* server) {
+	auto tickStartTime = std::chrono::high_resolution_clock::now();
+	std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 	while (true) {
-		auto tickStartTime = std::chrono::steady_clock::now();
 		GameObject::moveAllObjectsOneTick();
-		std::this_thread::sleep_until(tickStartTime + 1000ms);
+		sleep_until(tickStartTime + std::chrono::microseconds(1000000 / tick_rate));
+		tickStartTime = std::chrono::high_resolution_clock::now();
+		//std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(tickStartTime - begin).count() << "[µs]" << std::endl;
+		begin = std::chrono::high_resolution_clock::now();
+
 		if (server->users.size()) {
-			std::vector<unsigned char> dataToSend = server->generateDataToSend();
+			std::vector<unsigned char> dataToSend = server->formatGameStateToSend();
 			server->user_mutex.lock();
 			for (User& oneUser : server->users) {
 				oneUser.send_data(boost::asio::buffer(dataToSend));
@@ -104,7 +130,7 @@ void udp_server::orchestrate_object_movements(udp_server* server) {
 			server->user_mutex.unlock();
 		}
 		
-		std::cout << "one loop passed" << std::endl;
+		//std::cout << "one loop passed" << std::endl;
 	}
 }
 
@@ -124,22 +150,25 @@ User* udp_server::findUserByEndpoint(udp::endpoint &tested_endpoint){
 void udp_server::logUser(udp::endpoint& new_endpoint, udp::socket& socket) {
 	user_mutex.lock();
 	User* new_user = new User(&new_endpoint, &socket);
-	new_user->setCharacterPosition(point_t(2, 3, 4));
-	new_user->set
+	new_user->setCharacterPosition(point_t(0, 0, 0));
+	linestring_t new_trajectory = linestring_t();
+	bg::append(new_trajectory, point_t(0, 0, 10));
+	bg::append(new_trajectory, point_t(5, 0, 5));
+	new_user->setCharacterTrajectory(new_trajectory);
 	this->users.push_back(*new_user);
 	char data[1] = { 1 };
 	new_user->send_data(boost::asio::buffer(data));
 	user_mutex.unlock();
 }
 
-std::vector<unsigned char> udp_server::generateDataToSend() {
+std::vector<unsigned char> udp_server::formatGameStateToSend() {
 	std::vector<GameObject*>* allGameObjects = GameObject::getGameObjects();
 	unsigned char temp_buffer[4];
-	std::vector<unsigned char> sendVector({tick_id});
-	//Data format: tick_id[1], gameObjectId[4], x[4], y[4], z[4] => buffer size = (gameObjects.size() * 4) + 1
+	std::vector<unsigned char> sendVector({(char)3, tick_id});
+	//Data format: requestType[1] = 3, tick_id[1], gameObjectId[4], x[4], y[4], z[4] => buffer size = (gameObjects.size() * 4) + 1
 	for (GameObject* oneGameObject : *allGameObjects) {
 		point_t position = oneGameObject->getPosition();
-		std::cout << "coordinates to send for one object: " << std::endl;
+		//std::cout << "coordinates to send for one object: " << std::endl;
 		float coordinates[3];
 
 		unsigned int objectId = oneGameObject->getUid();
@@ -152,7 +181,7 @@ std::vector<unsigned char> udp_server::generateDataToSend() {
 		coordinates[1] = bg::get<1>(position);
 		coordinates[2] = bg::get<2>(position);
 		for (int i = 0; i < 3; i++) {
-			std::cout << coordinates[i] << std::endl;
+			//std::cout << coordinates[i] << std::endl;
 			memcpy(temp_buffer, &coordinates[i], sizeof(coordinates[i]));
 			for (int j = 0; j < 4; j++) {
 				sendVector.push_back(temp_buffer[j]);
