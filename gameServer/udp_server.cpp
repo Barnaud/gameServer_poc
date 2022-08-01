@@ -6,6 +6,7 @@
 #include "GameObject.h"
 #include <boost/bind/bind.hpp>
 #include "sleep.h"
+#include "ResBuffer.h"
 
 
 
@@ -64,32 +65,41 @@ void udp_server::route_received_data() {
 	if (receive_buffer && receive_buffer[0]) {
 		switch (receive_buffer[0])
 		{
-		case 1:
-		{
-			//LogUser
-			if (findUserByEndpoint(receive_endpoint)) {
-				//std::cout << "found user" << std::endl;
-				std::cout << "Trying to re-log already existing user. Ignoring...";
+			case 1:
+			{
+				//LogUser
+				if (findUserByEndpoint(receive_endpoint)) {
+					//std::cout << "found user" << std::endl;
+					std::cout << "Trying to re-log already existing user. Ignoring...";
+				}
+				else {
+					std::cout << "A new user logged in and was added" << std::endl;
+					logUser(receive_endpoint, *this->socket);
+				}
 			}
-			else {
-				std::cout << "A new user logged in and was added" << std::endl;
-				logUser(receive_endpoint, *this->socket);
-			}
-		}
-		case 2:
-		{
-			auto serverTime = std::chrono::system_clock::now();
-			//auto serverTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(serverTime.time_since_epoch()).count();
-			long long serverTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(serverTime.time_since_epoch()).count();
-
-			//int serverTimeBuffer[1] = { serverTimeMs };
-			std::cout << "Pause" << std::endl;
-			this->socket->send_to(boost::asio::buffer({serverTimeMs}), this->receive_endpoint);
-		}
-		default:
-			std::cout << "Received unknown request type (" <<receive_buffer[0]<< ").ignoring..." << std::endl;
 			break;
-		}
+			case 2:
+			{
+				auto serverTime = std::chrono::system_clock::now();
+				//auto serverTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(serverTime.time_since_epoch()).count();
+				long long serverTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(serverTime.time_since_epoch()).count();
+				ResBuffer* response = new ResBuffer();
+				response->pushBuffer(new unsigned char(2), sizeof(char));
+				response->pushBuffer(&serverTimeMs, sizeof(serverTimeMs));
+				response->pushBuffer(&receive_buffer, 8 * sizeof(char), 1);
+
+				//int serverTimeBuffer[1] = { serverTimeMs };
+				std::cout << "Pause" << std::endl;
+				std::vector<unsigned char> data = response->getBuffer();
+				//this->socket->send_to(boost::asio::buffer({response->getBuffer()}), this->receive_endpoint);
+				this->socket->send_to(boost::asio::buffer(data), this->receive_endpoint);
+
+			}
+			break;
+			default:
+				std::cout << "Received unknown request type (" <<(int) receive_buffer[0]<< ").ignoring..." << std::endl;
+				break;
+			}
 	}
 	else {
 		std::cout << "Received empty buffer. Ignoring...";
