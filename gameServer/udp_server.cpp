@@ -126,6 +126,7 @@ void udp_server::orchestrate_object_movements(udp_server* server) {
 	std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 	while (true) {
 		GameObject::moveAllObjectsOneTick();
+		auto duration = std::chrono::microseconds(1000000 / tick_rate);
 		sleep_until(tickStartTime + std::chrono::microseconds(1000000 / tick_rate));
 		tickStartTime = std::chrono::high_resolution_clock::now();
 		//std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(tickStartTime - begin).count() << "[µs]" << std::endl;
