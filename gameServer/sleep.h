@@ -3,4 +3,4 @@
 #include<chrono>
 #include<thread>
 
-void sleep_until(std::chrono::time_point<std::chrono::steady_clock> tp);
+void sleep_until(std::chrono::high_resolution_clock::time_point tp);
