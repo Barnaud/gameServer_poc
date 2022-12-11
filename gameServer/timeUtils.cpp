@@ -1,9 +1,9 @@
-#include "sleep.h"
+#include "timeUtils.h"
 
 
 using std::chrono::operator""ms;
 
-typedef std::chrono::duration<int, std::milli> milliseconds_type;
+//typedef std::chrono::duration<int, std::milli> milliseconds_type;
 
 //valid from 10ms; not less
 void sleep_until(std::chrono::high_resolution_clock::time_point tp) {
@@ -17,5 +17,11 @@ void sleep_until(std::chrono::high_resolution_clock::time_point tp) {
 	} while (!isTimerFinished);
 
 
+
+}
+
+long long getTimestampMs() {
+	auto serverTime = std::chrono::system_clock::now();
+	return std::chrono::duration_cast<std::chrono::milliseconds>(serverTime.time_since_epoch()).count();
 
 }

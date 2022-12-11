@@ -1,8 +1,9 @@
-#include "ResBuffer.h"
+#include "ClientBuffer.h"
 #include <iostream>
 #include <string>
 
-void ResBuffer::pushBuffer(void* eltToPush, unsigned int len, unsigned int skip) {
+
+void ClientBuffer::pushBuffer(void* eltToPush, unsigned int len, unsigned int skip) {
 	for (unsigned int i = skip; i < len + skip; i++) {
 		unsigned char* tmpByte = (unsigned char*)eltToPush +i;
 		this->internalBuffer.push_back(*tmpByte);
@@ -10,6 +11,6 @@ void ResBuffer::pushBuffer(void* eltToPush, unsigned int len, unsigned int skip)
 
 }
 
-std::vector<unsigned char> ResBuffer::getBuffer() {
+std::vector<unsigned char> ClientBuffer::getBuffer() {
 	return this->internalBuffer;
 }

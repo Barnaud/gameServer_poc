@@ -5,7 +5,7 @@ std::vector<GameObject*> GameObject::gameObjects;
 unsigned int GameObject::max_uid = 0;
 
 GameObject::GameObject() {
-	//std::cout << "Creating GameObject" << std::endl;
+	std::cout << "Creating GameObject 1" << std::endl;
 	uid = ++max_uid;
 	position = point_t(0, 0, 0);
 	trajectory = linestring_t();
@@ -16,7 +16,7 @@ GameObject::GameObject() {
 }
 GameObject::GameObject(point_t position_a) : position(position_a)
 {
-	//std::cout << "Creating GameObject" << std::endl;
+	std::cout << "Creating GameObject 2" << std::endl;
 	uid = ++max_uid;
 	trajectory = linestring_t();
 	default_speed = 1;
@@ -26,7 +26,7 @@ GameObject::GameObject(point_t position_a) : position(position_a)
 }
 GameObject::GameObject(point_t position_a, linestring_t trajectory_a) : position(position_a), trajectory(trajectory_a)
 {
-	//std::cout << "Creating GameObject" << std::endl;
+	std::cout << "Creating GameObject 3" << std::endl;
 	uid = ++max_uid;
 	default_speed = 1;
 	gameObjects.push_back(this);

@@ -26,12 +26,14 @@ private:
 
 	std::mutex user_mutex;
 
-	User* findUserByEndpoint(udp::endpoint &tested_endpoint);
+	User* findUserByEndpoint(udp::endpoint& tested_endpoint);
+	User* findUserByEndpoint(udp::endpoint &tested_endpoint, bool erase);
 	void logUser(udp::endpoint &new_endpoint, udp::socket &socket);
 	void start_socket_receive();
 	void route_received_data();
 	void on_socket_receive(const boost::system::error_code& error, std::size_t bytes_transferred);
 	static void orchestrate_object_movements(udp_server* server);
+	void handle_user_state();
 
 public:
 
