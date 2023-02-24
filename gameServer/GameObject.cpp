@@ -7,10 +7,12 @@ unsigned int GameObject::max_uid = 0;
 GameObject::GameObject() {
 	std::cout << "Creating GameObject 1" << std::endl;
 	uid = ++max_uid;
+	std::cout << "Newly created gameObject uid is: " << uid << std::endl;
 	position = point_t(0, 0, 0);
 	trajectory = linestring_t();
 	default_speed = 1;
 	gameObjects.push_back(this);
+	std::cout << "Gameobjects size: " << gameObjects.size();
 
 	//GameObject(point_t(0, 0, 0), linestring_t());
 }
