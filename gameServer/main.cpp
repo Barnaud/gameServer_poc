@@ -2,12 +2,16 @@
 #include "udp_server.h"
 #include "Constants.h"
 
+
+
+
 int main()
 {
+
     std::cout << "Starting gameserver" << std::endl;
     try {
-        udp_server my_server(server_port);
-        my_server.start_listening();
+        udp_server my_udp_server(server_port);
+        my_udp_server.start_listening();
         
 
     }

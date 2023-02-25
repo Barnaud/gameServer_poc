@@ -5,5 +5,23 @@ udp::endpoint User::get_endpoint() {
 }
 
 void User::send_data(boost::asio::mutable_buffer data) {
-	this->socket->send_to(boost::asio::buffer({ 1 }), *this->endpoint);
+	this->socket->send_to(data, *this->endpoint);
+}
+
+void User::setCharacterPosition(point_t new_position) {
+	character->setPosition(new_position);
+}
+
+void User::setCharacterTrajectory(linestring_t new_trajectory) {
+	character->setTrajectory(new_trajectory);
+}
+
+void User::validateReceivedPosition(point_t& received_position, time_point_t& recived_time_point) {
+	return;
+
+}
+
+
+unsigned int User::getCharacterUid() {
+	return character->getUid();
 }
