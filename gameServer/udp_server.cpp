@@ -73,30 +73,32 @@ void udp_server::start_socket_receive() {
 
 }
 
-void udp_server::route_received_data() {
-	if (receive_buffer && receive_buffer[0]) {
-		switch (receive_buffer[0])
+void udp_server::route_received_data(udp::endpoint *current_receive_endpoint, unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE]) {
+	std::cout << "Running route_received_data with " << *current_receive_endpoint << std::endl;
+	if (current_receive_buffer && current_receive_buffer[0]) {
+		switch (current_receive_buffer[0])
 		{
 			case 1:
 			{
 				//LogUser -> needs ACK (with gameobject id)
-				User* foundUser = findUserByEndpoint(receive_endpoint);
+				User* foundUser = findUserByEndpoint(current_receive_endpoint);
 				if (foundUser) {
 
-					char ack_buffer[] = { 5, receive_buffer[1], receive_buffer[2], 0, 0, 0, 0 };
+					char ack_buffer[] = { 5, current_receive_buffer[1], current_receive_buffer[2], 0, 0, 0, 0 };
 					// 5 (ACK identifier), receive_buffer[1-2] (request id), characte_uid (int -> 4bytes)
 					int characterUid = foundUser->getCharacterUid();
 					memcpy(&ack_buffer[3], &characterUid, 4);
-					this->socket->send_to(boost::asio::buffer(ack_buffer), receive_endpoint); //Ack login request; TODO: Make this a function
+					this->socket->send_to(boost::asio::buffer(ack_buffer), *current_receive_endpoint); //Ack login request; TODO: Make this a function
 					//TODO: Handle reconnexion?
 					//std::cout << "found user" << std::endl;
-					std::cout << "Trying to re-log already existing user. Ignoring...";
+					std::cout << "Trying to re-log already existing user. Ignoring... "<<current_receive_endpoint;
 				}
 				else {
 					std::cout << "A new user logged in and was added" << std::endl;
-					int* character_type = new int();
+					//int* character_type = new int();
 					//memcpy(character_type, &receive_buffer[2], 4);
-					logUser(receive_endpoint, *this->socket);
+					std::cout << "receive_endpoint_address outside: " << current_receive_endpoint << std::endl;
+					logUser(current_receive_endpoint, current_receive_buffer, *this->socket);
 					//delete character_type;
 				}
 			}
@@ -111,13 +113,13 @@ void udp_server::route_received_data() {
 				ClientBuffer* response = new ClientBuffer();
 				response->pushBuffer(new unsigned char(2), sizeof(char));
 				response->pushBuffer(&serverTimeMs, sizeof(serverTimeMs));
-				response->pushBuffer(&receive_buffer, 8 * sizeof(char), 1);
+				response->pushBuffer(current_receive_buffer, 8 * sizeof(char), 1);
 
 				//int serverTimeBuffer[1] = { serverTimeMs };
 				std::vector<unsigned char> data = response->getBuffer();
 				//this->socket->send_to(boost::asio::buffer({response->getBuffer()}), this->receive_endpoint);
 				//std::cout << "Pause1" << std::endl;
-				this->socket->send_to(boost::asio::buffer(data), this->receive_endpoint);
+				this->socket->send_to(boost::asio::buffer(data), *current_receive_endpoint);
 				delete response;
 				//std::cout << "Pause2" << std::endl;
 
@@ -125,13 +127,13 @@ void udp_server::route_received_data() {
 			break;
 			case 4:
 			{
-				std::cout << "Case 4" << std::endl;
-				udp_server::handle_user_state();
+				//std::cout << "Case 4" << std::endl;
+				udp_server::handle_user_state(current_receive_endpoint, current_receive_buffer);
 
 			}
 			break;
 			default:
-				std::cout << "Received unknown request type (" <<(int) receive_buffer[0]<< ").ignoring..." << std::endl;
+				std::cout << "Received unknown request type (" <<(int) current_receive_buffer[0]<< ").ignoring..." << std::endl;
 				break;
 			}
 	}
@@ -141,14 +143,14 @@ void udp_server::route_received_data() {
 
 }
 
-void udp_server::handle_user_state() {
+void udp_server::handle_user_state(udp::endpoint *current_receive_endpoint, unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE]) {
 	time_point_t serverTime = std::chrono::system_clock::now();
 
-	User* userToHandle = findUserByEndpoint(receive_endpoint);
+	User* userToHandle = findUserByEndpoint(current_receive_endpoint);
 	//get requestTime from 
 	//TODO: see if requestTimeMs memory is freed when leaving this scope
 	long long* requestTimeMs = new long long();
-	memcpy(requestTimeMs, &receive_buffer[1], 8);
+	memcpy(requestTimeMs, &current_receive_buffer[1], 8);
 	time_point_t requestTime =std::chrono::system_clock::time_point(std::chrono::milliseconds(*requestTimeMs));
 	delete requestTimeMs;
 	if (serverTime < requestTime) {
@@ -157,10 +159,10 @@ void udp_server::handle_user_state() {
 	}
 
 	float *x = new float(), *y = new float(), *z = new float(), *r = new float();
-	memcpy(x, &receive_buffer[9], 4);
-	memcpy(y, &receive_buffer[13], 4);
-	memcpy(z, &receive_buffer[17], 4);
-	memcpy(r, &receive_buffer[21], 4);
+	memcpy(x, &current_receive_buffer[9], 4);
+	memcpy(y, &current_receive_buffer[13], 4);
+	memcpy(z, &current_receive_buffer[17], 4);
+	memcpy(r, &current_receive_buffer[21], 4);
 
 	//TODO: check that provided position is not too far from the previous one, that walls are not being crossed
 
@@ -168,7 +170,6 @@ void udp_server::handle_user_state() {
 
 	userToHandle->validateReceivedPosition(received_position, requestTime);
 	userToHandle->setCharacterPosition(received_position);
-	std::cout;
 	//TODO:store old positions of the  gameObject somewhere
 
 
@@ -182,8 +183,15 @@ void udp_server::on_socket_receive(const boost::system::error_code& error, std::
 		//for (int i = 0; i < 3; i++) {
 		//	//std::cout << "data " << i << ": " << (int)receive_buffer[i] << std::endl;
 		//}
-		std::cout << "data " << (int)receive_buffer[0] << std::endl;
-		route_received_data();
+		//std::cout << "data " << (int)receive_buffer[0] << std::endl;
+		//udp::endpoint current_receive_endpoint = receive_endpoint;
+		unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE];
+		memcpy(&current_receive_buffer, &receive_buffer, RECEIVE_BUFFER_SIZE);
+		udp::endpoint* current_receive_endpoint = new udp::endpoint(receive_endpoint);
+
+		//std::stringstream endpoint_str;
+		//endpoint_str << current_receive_endpoint;
+		route_received_data(current_receive_endpoint, current_receive_buffer);
 		udp_server::start_socket_receive();
 	}
 	else {
@@ -191,7 +199,7 @@ void udp_server::on_socket_receive(const boost::system::error_code& error, std::
 		if (error.value() == 10061)
 		{
 			std::cout << "Player disconnected." << std::endl;
-			findUserByEndpoint(receive_endpoint, true);
+			findUserByEndpoint(&receive_endpoint, true);
 
 		}
 	}
@@ -211,8 +219,8 @@ void udp_server::orchestrate_object_movements(udp_server* server) {
 		if (server->users.size()) {
 			std::vector<unsigned char> dataToSend = server->formatGameStateToSend();
 			server->user_mutex.lock();
-			for (User& oneUser : server->users) {
-				oneUser.send_data(boost::asio::buffer(dataToSend));
+			for (User *oneUser : server->users) {
+				oneUser->send_data(boost::asio::buffer(dataToSend));
 			}
 			server->user_mutex.unlock();
 		}
@@ -221,17 +229,18 @@ void udp_server::orchestrate_object_movements(udp_server* server) {
 	}
 }
 
-User* udp_server::findUserByEndpoint(udp::endpoint &tested_endpoint, bool erase){
+User* udp_server::findUserByEndpoint(udp::endpoint *tested_endpoint, bool erase){
 	user_mutex.lock();
 	for (int i = 0; i < this->users.size(); i++) {
-		if (this->users[i].get_endpoint() == tested_endpoint) {
+		std::cout << "Will compare: " << *tested_endpoint << " With " << this->users[i]->get_endpoint() << std::endl;
+		if (this->users[i]->get_endpoint() == *tested_endpoint) {
 			if (erase) {
 				this->users.erase(this->users.begin() + i);
 				user_mutex.unlock();
 				return NULL;
 			}
 			user_mutex.unlock();
-			return &users[i];
+			return users[i];
 		}
 	}
 	user_mutex.unlock();
@@ -239,25 +248,25 @@ User* udp_server::findUserByEndpoint(udp::endpoint &tested_endpoint, bool erase)
 
 }
 
-User* udp_server::findUserByEndpoint(udp::endpoint& tested_endpoint) {
+User* udp_server::findUserByEndpoint(udp::endpoint *tested_endpoint) {
 	return findUserByEndpoint(tested_endpoint, false);
 }
 
-void udp_server::logUser(udp::endpoint& new_endpoint, udp::socket& socket) {
+void udp_server::logUser(udp::endpoint* new_endpoint, unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE], udp::socket& socket) {
 	user_mutex.lock();
-	User* new_user = new User(&new_endpoint, &socket);
+	User* new_user = new User(new_endpoint, &socket);
 	point_t start_position = point_t(0, 0, 0);
 	new_user->setCharacterPosition(start_position);
 	/*linestring_t new_trajectory = linestring_t();
 	bg::append(new_trajectory, point_t(0, 0, 10));
 	bg::append(new_trajectory, point_t(5, 0, 5));
 	new_user->setCharacterTrajectory(new_trajectory);*/
-	this->users.push_back(*new_user);
+	this->users.push_back(new_user);
 	char data[] = { 1 };
-	char ack_buffer[] = { 5, receive_buffer[1], receive_buffer[2], 0, 0, 0, 0 };
+	char ack_buffer[] = { 5, current_receive_buffer[1], current_receive_buffer[2], 0, 0, 0, 0 };
 	int characterUid = new_user->getCharacterUid();
 	memcpy(&ack_buffer[3], &characterUid, 4);
-	this->socket->send_to(boost::asio::buffer(ack_buffer), receive_endpoint); //Ack login request
+	this->socket->send_to(boost::asio::buffer(ack_buffer), *new_endpoint); //Ack login request
 	//new_user->send_data(boost::asio::buffer(data));
 	user_mutex.unlock();
 }
@@ -283,6 +292,7 @@ std::vector<unsigned char> udp_server::formatGameStateToSend() {
 		coordinates[0] = bg::get<0>(position);
 		coordinates[1] = bg::get<1>(position);
 		coordinates[2] = bg::get<2>(position);
+
 		for (int i = 0; i < 3; i++) {
 			response.pushBuffer(&coordinates[i], sizeof(float));
 		}
