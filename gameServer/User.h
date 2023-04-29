@@ -30,11 +30,12 @@ public:
 	void send_data(boost::asio::mutable_buffer data);
 
 	unsigned int getCharacterUid();
+	void setLastAckedRequestTimestamp(long long new_lastAckedRequestTimestamp);
 
 private:
 	udp::endpoint* endpoint;
 	udp::socket* socket;
 	GameObject* character;
 	timed_point_t previous_position;
-
+	long long lastAckedRequestTimestamp = 0;
 };

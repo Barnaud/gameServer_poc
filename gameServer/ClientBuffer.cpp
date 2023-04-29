@@ -11,6 +11,18 @@ void ClientBuffer::pushBuffer(void* eltToPush, unsigned int len, unsigned int sk
 
 }
 
+void ClientBuffer::pushPoint(point_t& const pointToPush) {
+	float coordinates[3];
+
+	coordinates[0] = bg::get<0>(pointToPush);
+	coordinates[1] = bg::get<1>(pointToPush);
+	coordinates[2] = bg::get<2>(pointToPush);
+
+	for (int i = 0; i < 3; i++) {
+		pushBuffer(&coordinates[i], sizeof(float));
+	}
+}
+
 std::vector<unsigned char> ClientBuffer::getBuffer() {
 	return this->internalBuffer;
 }

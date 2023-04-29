@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "geometry_typedef.h"
+#include "GameObjectStateHistory.h"
 
 
 class GameObject
@@ -32,6 +33,8 @@ private:
 	unsigned uid;
 
 	void trajectoryPullFront();
+
+	GameObjectStateHistory history;
 
 	static unsigned int max_uid;
 	static std::vector<GameObject*> gameObjects;

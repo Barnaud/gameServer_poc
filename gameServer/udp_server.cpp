@@ -32,6 +32,19 @@
 
 typedef std::chrono::duration<int, std::milli> milliseconds_type;
 
+enum clientRequestTypes {
+	userLogin=1, 
+	clientGetRtt=2,
+	sendClientState=4,
+	clientAckRequest=5
+};
+
+enum serverResponseTypes {
+	serverGetRtt=2,
+	sendServerState=3,
+	serverAckRequest=5, 
+};
+
 
 udp_server::udp_server(int port) {
 
@@ -78,13 +91,12 @@ void udp_server::route_received_data(udp::endpoint *current_receive_endpoint, un
 	if (current_receive_buffer && current_receive_buffer[0]) {
 		switch (current_receive_buffer[0])
 		{
-			case 1:
+			case clientRequestTypes::userLogin:
 			{
 				//LogUser -> needs ACK (with gameobject id)
 				User* foundUser = findUserByEndpoint(current_receive_endpoint);
 				if (foundUser) {
-
-					char ack_buffer[] = { 5, current_receive_buffer[1], current_receive_buffer[2], 0, 0, 0, 0 };
+					char ack_buffer[] = { serverResponseTypes::serverAckRequest, current_receive_buffer[1], current_receive_buffer[2], 0, 0, 0, 0 };
 					// 5 (ACK identifier), receive_buffer[1-2] (request id), characte_uid (int -> 4bytes)
 					int characterUid = foundUser->getCharacterUid();
 					memcpy(&ack_buffer[3], &characterUid, 4);
@@ -103,7 +115,7 @@ void udp_server::route_received_data(udp::endpoint *current_receive_endpoint, un
 				}
 			}
 			break;
-			case 2:
+			case clientRequestTypes::clientGetRtt:
 			{
 				//std::cout << "Pause0" << std::endl;
 				auto serverTime = std::chrono::system_clock::now();
@@ -111,7 +123,7 @@ void udp_server::route_received_data(udp::endpoint *current_receive_endpoint, un
 				//auto serverTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(serverTime.time_since_epoch()).count();
 				long long serverTimeMs = getTimestampMs();
 				ClientBuffer* response = new ClientBuffer();
-				response->pushBuffer(new unsigned char(2), sizeof(char));
+				response->pushBuffer(new unsigned char(serverResponseTypes::serverGetRtt), sizeof(char));
 				response->pushBuffer(&serverTimeMs, sizeof(serverTimeMs));
 				response->pushBuffer(current_receive_buffer, 8 * sizeof(char), 1);
 
@@ -125,11 +137,21 @@ void udp_server::route_received_data(udp::endpoint *current_receive_endpoint, un
 
 			}
 			break;
-			case 4:
+			case clientRequestTypes::sendClientState:
 			{
 				//std::cout << "Case 4" << std::endl;
 				udp_server::handle_user_state(current_receive_endpoint, current_receive_buffer);
 
+			}
+			break;
+			case clientRequestTypes::clientAckRequest:
+			{
+				User* userAcking = findUserByEndpoint(current_receive_endpoint);
+				if (userAcking) {
+					long long ackedTimestamp;
+					memcpy(&ackedTimestamp, current_receive_buffer + 1, 8);
+					userAcking->setLastAckedRequestTimestamp(ackedTimestamp);
+				}
 			}
 			break;
 			default:
@@ -232,7 +254,7 @@ void udp_server::orchestrate_object_movements(udp_server* server) {
 User* udp_server::findUserByEndpoint(udp::endpoint *tested_endpoint, bool erase){
 	user_mutex.lock();
 	for (int i = 0; i < this->users.size(); i++) {
-		std::cout << "Will compare: " << *tested_endpoint << " With " << this->users[i]->get_endpoint() << std::endl;
+		//std::cout << "Will compare: " << *tested_endpoint << " With " << this->users[i]->get_endpoint() << std::endl;
 		if (this->users[i]->get_endpoint() == *tested_endpoint) {
 			if (erase) {
 				this->users.erase(this->users.begin() + i);
@@ -274,7 +296,7 @@ void udp_server::logUser(udp::endpoint* new_endpoint, unsigned char current_rece
 std::vector<unsigned char> udp_server::formatGameStateToSend() {
 	std::vector<GameObject*>* allGameObjects = GameObject::getGameObjects();
 	ClientBuffer response = ClientBuffer();
-	char* request_id = new char(3);
+	char* request_id = new char(serverResponseTypes::sendServerState);
 	response.pushBuffer(request_id, sizeof(char));
 	long long serverTimeMs = getTimestampMs();
 
@@ -284,18 +306,10 @@ std::vector<unsigned char> udp_server::formatGameStateToSend() {
 	for (GameObject* oneGameObject : *allGameObjects) {
 		point_t position = oneGameObject->getPosition();
 		//std::cout << "coordinates to send for one object: " << std::endl;
-		float coordinates[3];
 
 		unsigned int objectId = oneGameObject->getUid();
 		response.pushBuffer(&objectId, sizeof(objectId));
-		
-		coordinates[0] = bg::get<0>(position);
-		coordinates[1] = bg::get<1>(position);
-		coordinates[2] = bg::get<2>(position);
-
-		for (int i = 0; i < 3; i++) {
-			response.pushBuffer(&coordinates[i], sizeof(float));
-		}
+		response.pushPoint(position);
 
 	}
 	return response.getBuffer();

@@ -21,6 +21,12 @@ void User::validateReceivedPosition(point_t& received_position, time_point_t& re
 
 }
 
+void User::setLastAckedRequestTimestamp(long long new_lastAckedRequestTimestamp) {
+	if (new_lastAckedRequestTimestamp > lastAckedRequestTimestamp) {
+		lastAckedRequestTimestamp = new_lastAckedRequestTimestamp;
+	}
+}
+
 
 unsigned int User::getCharacterUid() {
 	return character->getUid();

@@ -119,6 +119,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_WIN32_WINNT=0x0501;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\benol\Documents\dev\boost_1_78_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,6 +145,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="GameObject.cpp" />
+    <ClCompile Include="GameObjectStateHistory.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ClientBuffer.cpp" />
     <ClCompile Include="timeUtils.cpp" />
@@ -155,6 +157,7 @@
     <ClInclude Include="chrono_typedef.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="GameObject.h" />
+    <ClInclude Include="GameObjectStateHistory.h" />
     <ClInclude Include="geometry_typedef.h" />
     <ClInclude Include="ClientBuffer.h" />
     <ClInclude Include="timeUtils.h" />
