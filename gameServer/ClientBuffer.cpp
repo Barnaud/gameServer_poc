@@ -11,6 +11,12 @@ void ClientBuffer::pushBuffer(void* eltToPush, unsigned int len, unsigned int sk
 
 }
 
+void ClientBuffer::pushBuffer(ClientBuffer* bufferToPush) {
+	for (unsigned char tmpByte : bufferToPush->getBuffer()) {
+		this->internalBuffer.push_back(tmpByte);
+	}
+}
+
 void ClientBuffer::pushPoint(point_t& const pointToPush) {
 	float coordinates[3];
 
@@ -26,3 +32,4 @@ void ClientBuffer::pushPoint(point_t& const pointToPush) {
 std::vector<unsigned char> ClientBuffer::getBuffer() {
 	return this->internalBuffer;
 }
+

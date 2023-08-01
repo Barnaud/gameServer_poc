@@ -16,21 +16,30 @@ public:
 	void setPosition(point_t new_position);
 	point_t getPosition();
 
+	GameObjectState getState();
+
 	void setTrajectory(linestring_t new_trajectory);
 	linestring_t getTrajectory();
 
 	unsigned int getUid();
 	void moveOneTick();
 	void moveOneTick(float custom_speed);
+
+	ClientBuffer toClientBuffer();
+	GameObjectStateHistory* getHistory();
 	static std::vector<GameObject*>* getGameObjects();
 	static void moveAllObjectsOneTick();
+	static void registerAllHistories();
 
 
 private:
 	point_t position = point_t(0, 0);
 	linestring_t trajectory;
 	float default_speed;
-	unsigned uid;
+	unsigned int uid;
+
+	int actionId = 0;
+	int actionFrame = 0;
 
 	void trajectoryPullFront();
 

@@ -1,6 +1,8 @@
 #include "GameObject.h"
 #include "Constants.h"
 
+using namespace std::chrono_literals;
+
 std::vector<GameObject*> GameObject::gameObjects;
 unsigned int GameObject::max_uid = 0;
 
@@ -49,8 +51,13 @@ void GameObject::setPosition(point_t new_position) {
 }
 
 point_t GameObject::getPosition() {
-
 	return position;
+}
+
+GameObjectState GameObject::getState() {
+	GameObjectState stateToReturn = GameObjectState();
+	stateToReturn.position = position;
+	return stateToReturn;
 }
 
 void GameObject::setTrajectory(linestring_t new_trajectory) {
@@ -65,20 +72,51 @@ unsigned int GameObject::getUid() {
 	return uid;
 }
 
+ClientBuffer GameObject::toClientBuffer() {
+
+	ClientBuffer bufferToReturn = ClientBuffer();
+	bufferToReturn.pushBuffer(&uid, sizeof(uid));
+	bufferToReturn.pushPoint(position);
+	bufferToReturn.pushBuffer(&actionId, sizeof(actionId));
+	bufferToReturn.pushBuffer(&actionFrame, sizeof(actionFrame));
+	
+	return bufferToReturn;
+}
+
+GameObjectStateHistory* GameObject::getHistory() {
+	return &history;
+}
+
 void GameObject::moveOneTick() {
 	return moveOneTick(default_speed);
 }
 
-void GameObject::moveAllObjectsOneTick()
-{
+void GameObject::moveAllObjectsOneTick() {
 	for (GameObject* oneGameObject : GameObject::gameObjects) {
 		oneGameObject->moveOneTick();
+	}
+}
+
+void GameObject::registerAllHistories() {
+	time_point_t now_timestamp = std::chrono::system_clock::now();
+	std::chrono::seconds oneSecond(1);
+	time_point_t oneSecondAgo = now_timestamp - oneSecond;
+	for (GameObject* oneGameObject : GameObject::gameObjects) {
+		GameObjectState currentState = oneGameObject->getState();
+		currentState.timestamp = now_timestamp;
+		oneGameObject->history.registerStateToHistory(currentState);
+		/*auto myDelta = oneGameObject->history.getDeltaSince(oneSecondAgo);
+		if (myDelta != std::nullopt && myDelta.value().changeType == changeType::updated) {
+			std::cout << "state updated" << std::endl;
+		}*/
+		//std::cout << "aa" << std::endl;
 	}
 }
 std::vector<GameObject*>* GameObject::getGameObjects() {
 	return &gameObjects;
 
 }
+
 
 void GameObject::moveOneTick(float custom_speed) {
 	if (custom_speed <= 0 || !trajectory.size()) {

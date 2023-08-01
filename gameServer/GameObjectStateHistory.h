@@ -45,7 +45,7 @@ private:
 
 public: 
 	std::deque<GameObjectState> getStates() const;
-	void enqueue(GameObjectState stateToEnqueue);
+	void registerStateToHistory(GameObjectState stateToEnqueue);
 	std::optional<StateDelta> getDeltaSince(time_point_t timestamp);
 	time_point_t getLatestTimestamp();
 	time_point_t getOldestTimestamp();

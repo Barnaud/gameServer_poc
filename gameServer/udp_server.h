@@ -41,7 +41,6 @@ public:
 
 	udp_server(int port);
 	void start_listening();
-	std::vector<unsigned char> formatGameStateToSend();
-
-
+	std::vector<unsigned char> formatGameStateToSend(User* userToSendStateTo);
+	std::optional<ClientBuffer*> formatGameDeltaToSend(User* userToSendStateTo);
 };

@@ -43,6 +43,7 @@ enum serverResponseTypes {
 	serverGetRtt=2,
 	sendServerState=3,
 	serverAckRequest=5, 
+	sendServerDelta=6,
 };
 
 
@@ -87,7 +88,7 @@ void udp_server::start_socket_receive() {
 }
 
 void udp_server::route_received_data(udp::endpoint *current_receive_endpoint, unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE]) {
-	std::cout << "Running route_received_data with " << *current_receive_endpoint << std::endl;
+	//std::cout << "Running route_received_data with " << *current_receive_endpoint << std::endl;
 	if (current_receive_buffer && current_receive_buffer[0]) {
 		switch (current_receive_buffer[0])
 		{
@@ -169,6 +170,10 @@ void udp_server::handle_user_state(udp::endpoint *current_receive_endpoint, unsi
 	time_point_t serverTime = std::chrono::system_clock::now();
 
 	User* userToHandle = findUserByEndpoint(current_receive_endpoint);
+	if (!userToHandle) {
+		//user is not reckognized, and his input is ignored
+		return;
+	}
 	//get requestTime from 
 	//TODO: see if requestTimeMs memory is freed when leaving this scope
 	long long* requestTimeMs = new long long();
@@ -201,7 +206,7 @@ void udp_server::on_socket_receive(const boost::system::error_code& error, std::
 	if (!error) {
 
 		//DEBUG: Read receivedData
-		std::cout << "got data from endpoint: " << receive_endpoint << std::endl;
+		// std::cout << "got data from endpoint: " << receive_endpoint << std::endl;
 		//for (int i = 0; i < 3; i++) {
 		//	//std::cout << "data " << i << ": " << (int)receive_buffer[i] << std::endl;
 		//}
@@ -233,15 +238,18 @@ void udp_server::orchestrate_object_movements(udp_server* server) {
 	//std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 	while (true) {
 		GameObject::moveAllObjectsOneTick();
+		//std::cout << "tick took " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - tickStartTime ).count() << " ms" << std::endl;
 		sleep_until(tickStartTime + std::chrono::microseconds(1000000 / tick_rate));
 		tickStartTime = std::chrono::high_resolution_clock::now();
+		GameObject::registerAllHistories();
+
 		//std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(tickStartTime - begin).count() << "[µs]" << std::endl;
 		//begin = std::chrono::high_resolution_clock::now();
 
 		if (server->users.size()) {
-			std::vector<unsigned char> dataToSend = server->formatGameStateToSend();
 			server->user_mutex.lock();
 			for (User *oneUser : server->users) {
+				std::vector<unsigned char> dataToSend = server->formatGameStateToSend(oneUser);
 				oneUser->send_data(boost::asio::buffer(dataToSend));
 			}
 			server->user_mutex.unlock();
@@ -293,24 +301,72 @@ void udp_server::logUser(udp::endpoint* new_endpoint, unsigned char current_rece
 	user_mutex.unlock();
 }
 
-std::vector<unsigned char> udp_server::formatGameStateToSend() {
-	std::vector<GameObject*>* allGameObjects = GameObject::getGameObjects();
-	ClientBuffer response = ClientBuffer();
-	char* request_id = new char(serverResponseTypes::sendServerState);
-	response.pushBuffer(request_id, sizeof(char));
-	long long serverTimeMs = getTimestampMs();
 
+std::vector<unsigned char> udp_server::formatGameStateToSend(User* userToSendStateTo) {
+
+	long long serverTimeMs = getTimestampMs();
+	ClientBuffer response = ClientBuffer();
+	std::optional<ClientBuffer*> gameDeltaToSend = formatGameDeltaToSend(userToSendStateTo);
+	
+	//if the last user ack is not too old, send game delta, else, send whole game state.
+	if (gameDeltaToSend.has_value()) {
+		char* request_type = new char(serverResponseTypes::sendServerDelta);
+		response.pushBuffer(request_type, sizeof(char));
+		delete request_type; 
+		response.pushBuffer(&serverTimeMs, sizeof(serverTimeMs));
+		ClientBuffer* gameDeltaToSendValue = gameDeltaToSend.value();
+		response.pushBuffer(gameDeltaToSendValue);
+		return response.getBuffer();
+	}
+	std::cout << "State too old; sending whole gamestate" << std::endl;
+	std::vector<GameObject*>* allGameObjects = GameObject::getGameObjects();
+
+
+	
+	char* request_type = new char(serverResponseTypes::sendServerState);
+	response.pushBuffer(request_type, sizeof(char));
+	delete request_type;
 	response.pushBuffer(&serverTimeMs, sizeof(serverTimeMs));
 
-	//Data format: requestType[1] = 3, server_timestamp[8], gameObjectId[4], x[4], y[4], z[4] => buffer size = (gameObjects.size() * 4) + 1
+	//Data format: requestType[1] = 3, server_timestamp[8], gameObjectId[4], x[4], y[4], z[4], actionId[4], actionFrame[4] => buffer size = (gameObjects.size() * 24) + 9
 	for (GameObject* oneGameObject : *allGameObjects) {
-		point_t position = oneGameObject->getPosition();
-		//std::cout << "coordinates to send for one object: " << std::endl;
-
-		unsigned int objectId = oneGameObject->getUid();
-		response.pushBuffer(&objectId, sizeof(objectId));
-		response.pushPoint(position);
-
+		ClientBuffer oneObjectBuffer = oneGameObject->toClientBuffer();
+		response.pushBuffer(&oneObjectBuffer);
 	}
 	return response.getBuffer();
+}
+
+//Data format <user whole state>, <deltas>
+//user whole state format: gameObjectId[4], x[4], y[4], z[4], actionId[4], actionFrame[4]
+// delta format: changeType[1] (create, update, delete),(dataType_position[1],  position[12]),(dataType_actionId[1], actionId[4], actionFrame[4]) 0xff
+// Note: 0xff means "end of this gameObject. To prevent colision, dataId 0xff is reserved.
+std::optional<ClientBuffer*> udp_server::formatGameDeltaToSend(User* userToSendStateTo) {
+
+	ClientBuffer* bufferToReturn = new ClientBuffer();
+	std::vector<GameObject*>* allGameObjects = GameObject::getGameObjects();
+	time_point_t lastAckedRequest = userToSendStateTo->getLastAckedRequestTimestamp();
+	ClientBuffer userStateBuffer = userToSendStateTo->getCharacter()->toClientBuffer();
+	unsigned int characterUid = userToSendStateTo->getCharacterUid();
+	//bufferToReturn->pushBuffer(&characterUid, sizeof(unsigned int));
+	bufferToReturn->pushBuffer(&userStateBuffer);
+
+	for (GameObject* oneGameObject : *allGameObjects) {
+		if (oneGameObject->getUid() == userToSendStateTo->getCharacterUid()) {
+			continue;
+		}
+		std::optional<StateDelta> oneStateDelta = oneGameObject->getHistory()->getDeltaSince(lastAckedRequest);
+		unsigned int oneUid = oneGameObject->getUid();
+		if (!oneStateDelta.has_value()) {
+			return std::nullopt;
+		}
+
+		StateDelta oneStateDeltaValue = oneStateDelta.value();
+		if (oneStateDeltaValue.changeType == changeType::none) {
+			continue;
+		}
+		ClientBuffer oneStateDeltaBuffer = oneStateDeltaValue.toClientBuffer();
+		bufferToReturn->pushBuffer(&oneUid, sizeof(unsigned int));
+		bufferToReturn->pushBuffer(&oneStateDeltaBuffer);
+	}
+	return bufferToReturn;
 }
