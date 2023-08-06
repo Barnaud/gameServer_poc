@@ -1,4 +1,3 @@
-#pragma once
 #include "GameObjectStateHistory.h"
 
 std::deque<GameObjectState> GameObjectStateHistory::getStates() const {
@@ -30,23 +29,23 @@ std::optional<StateDelta> GameObjectStateHistory::getDeltaSince(time_point_t ori
 	}
 		
 	//state 0 (front) is the newest state
-	int observedStateIndex = 0;
+	size_t observedStateIndex = 0;
 	while (states[observedStateIndex].timestamp > origin_timestamp && observedStateIndex < states.size() - 1) {
 		GameObjectState& thisTickState = states[observedStateIndex];
 		GameObjectState& previousTickState = states[observedStateIndex + 1];
 		if (thisTickState.isDestroyed && !previousTickState.isDestroyed) {
-			stateDeltaToReturn.changeType = changeType::deleted;
+			stateDeltaToReturn.changeType = ChangeType::deleted;
 			return stateDeltaToReturn;
 		}
 		if (!thisTickState.isDestroyed) {
 			if (stateDeltaToReturn.newPosition == std::nullopt && !bg::equals(thisTickState.position, previousTickState.position)) {
 				stateDeltaToReturn.newPosition = thisTickState.position;
-				stateDeltaToReturn.changeType = changeType::updated;
+				stateDeltaToReturn.changeType = ChangeType::updated;
 			}
 			if (stateDeltaToReturn.newActionId == std::nullopt && thisTickState.actionId != previousTickState.actionId) {
 				stateDeltaToReturn.newActionId = thisTickState.actionId;
 				stateDeltaToReturn.newActionFrame = thisTickState.actionId;
-				stateDeltaToReturn.changeType = changeType::updated;
+				stateDeltaToReturn.changeType = ChangeType::updated;
 			}
 
 		}
@@ -55,7 +54,7 @@ std::optional<StateDelta> GameObjectStateHistory::getDeltaSince(time_point_t ori
 	}
 
 	if (origin_timestamp < getOldestTimestamp() && states.size() < savedStatesCount) {
-		stateDeltaToReturn.changeType = changeType::created;
+		stateDeltaToReturn.changeType = ChangeType::created;
 		if (stateDeltaToReturn.newPosition == std::nullopt) {
 			stateDeltaToReturn.newPosition = states[0].position;
 		}
@@ -96,15 +95,14 @@ time_point_t GameObjectStateHistory::getOldestTimestamp() {
 
 ClientBuffer StateDelta::toClientBuffer() {
 	ClientBuffer bufferToReturn = ClientBuffer();
-	char charChangeType = (unsigned char)changeType;
 	bufferToReturn.pushBuffer(&changeType, sizeof(char));
 	if (newPosition != std::nullopt) {
-		char charPositionDataId = (unsigned char)dataId::position;
+		char charPositionDataId = (unsigned char)DataId::position;
 		bufferToReturn.pushBuffer(&charPositionDataId, sizeof(char));
 		bufferToReturn.pushPoint(newPosition.value());
 	}
 	if (newActionId != std::nullopt) {
-		char charActionIdDataId = (unsigned char)dataId::actionId;
+		char charActionIdDataId = (unsigned char)DataId::actionId;
 		bufferToReturn.pushBuffer(&charActionIdDataId, sizeof(char));
 		bufferToReturn.pushBuffer(&(newActionId.value()), sizeof(int));
 		bufferToReturn.pushBuffer(&newActionFrame, sizeof(int));

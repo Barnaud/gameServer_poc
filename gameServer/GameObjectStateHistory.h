@@ -8,14 +8,14 @@
 
 #define savedStatesCount 255
 
-enum changeType {
+enum class ChangeType {
 	none=0,
 	created=1,
 	updated=2,
 	deleted=3,
 };
 
-enum dataId {
+enum class DataId {
 	position=1,
 	actionId=2,
 };
@@ -30,7 +30,7 @@ struct GameObjectState  {
 };
 
 struct StateDelta {
-	changeType changeType = changeType::none;
+	ChangeType changeType = ChangeType::none;
 	std::optional<point_t> newPosition = std::nullopt;
 	std::optional<int>newActionId = std::nullopt;
 	int newActionFrame=0;

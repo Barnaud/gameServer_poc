@@ -261,7 +261,7 @@ void udp_server::orchestrate_object_movements(udp_server* server) {
 
 User* udp_server::findUserByEndpoint(udp::endpoint *tested_endpoint, bool erase){
 	user_mutex.lock();
-	for (int i = 0; i < this->users.size(); i++) {
+	for (size_t i = 0; i < this->users.size(); i++) {
 		//std::cout << "Will compare: " << *tested_endpoint << " With " << this->users[i]->get_endpoint() << std::endl;
 		if (this->users[i]->get_endpoint() == *tested_endpoint) {
 			if (erase) {
@@ -292,7 +292,6 @@ void udp_server::logUser(udp::endpoint* new_endpoint, unsigned char current_rece
 	bg::append(new_trajectory, point_t(5, 0, 5));
 	new_user->setCharacterTrajectory(new_trajectory);*/
 	this->users.push_back(new_user);
-	char data[] = { 1 };
 	char ack_buffer[] = { 5, current_receive_buffer[1], current_receive_buffer[2], 0, 0, 0, 0 };
 	int characterUid = new_user->getCharacterUid();
 	memcpy(&ack_buffer[3], &characterUid, 4);
@@ -346,8 +345,6 @@ std::optional<ClientBuffer*> udp_server::formatGameDeltaToSend(User* userToSendS
 	std::vector<GameObject*>* allGameObjects = GameObject::getGameObjects();
 	time_point_t lastAckedRequest = userToSendStateTo->getLastAckedRequestTimestamp();
 	ClientBuffer userStateBuffer = userToSendStateTo->getCharacter()->toClientBuffer();
-	unsigned int characterUid = userToSendStateTo->getCharacterUid();
-	//bufferToReturn->pushBuffer(&characterUid, sizeof(unsigned int));
 	bufferToReturn->pushBuffer(&userStateBuffer);
 
 	for (GameObject* oneGameObject : *allGameObjects) {
@@ -361,7 +358,7 @@ std::optional<ClientBuffer*> udp_server::formatGameDeltaToSend(User* userToSendS
 		}
 
 		StateDelta oneStateDeltaValue = oneStateDelta.value();
-		if (oneStateDeltaValue.changeType == changeType::none) {
+		if (oneStateDeltaValue.changeType == ChangeType::none) {
 			continue;
 		}
 		ClientBuffer oneStateDeltaBuffer = oneStateDeltaValue.toClientBuffer();

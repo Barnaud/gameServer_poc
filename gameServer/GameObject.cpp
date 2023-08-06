@@ -138,7 +138,6 @@ void GameObject::moveOneTick(float custom_speed) {
 	point_t& next_dest = trajectory[0];
 	point_t next_position = next_dest;
 	bg::subtract_point(next_position, position);
-	float dst = bg::distance(next_dest, position);
 	bg::multiply_value(next_position, ((1.0f / bg::distance(next_dest, position)) * moveDistance));
 	bg::add_point(next_position, position);
 	position = next_position;
@@ -148,7 +147,7 @@ void GameObject::moveOneTick(float custom_speed) {
 void GameObject::trajectoryPullFront() {
 	std::vector<point_t> new_points;
 
-	for (int i = 0; i < trajectory.size(); i++) {
+	for (size_t i = 0; i < trajectory.size(); i++) {
 		if (i != 0) {
 			new_points.push_back(trajectory[i]);
 		}

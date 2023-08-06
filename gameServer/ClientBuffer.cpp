@@ -17,7 +17,7 @@ void ClientBuffer::pushBuffer(ClientBuffer* bufferToPush) {
 	}
 }
 
-void ClientBuffer::pushPoint(point_t& const pointToPush) {
+void ClientBuffer::pushPoint(const point_t& pointToPush) {
 	float coordinates[3];
 
 	coordinates[0] = bg::get<0>(pointToPush);
