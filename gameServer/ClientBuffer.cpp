@@ -3,12 +3,12 @@
 #include <string>
 
 
+//It is the caller's responsability to delete the elt after calling this.
 void ClientBuffer::pushBuffer(void* eltToPush, unsigned int len, unsigned int skip) {
 	for (unsigned int i = skip; i < len + skip; i++) {
 		unsigned char* tmpByte = (unsigned char*)eltToPush +i;
 		this->internalBuffer.push_back(*tmpByte);
 	}
-
 }
 
 void ClientBuffer::pushBuffer(ClientBuffer* bufferToPush) {

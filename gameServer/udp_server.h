@@ -28,14 +28,14 @@ private:
 
 	std::mutex user_mutex;
 
-	User* findUserByEndpoint(udp::endpoint *tested_endpoint);
-	User* findUserByEndpoint(udp::endpoint *tested_endpoint, bool erase);
-	void logUser(udp::endpoint *new_endpoint, unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE], udp::socket &socket);
+	User* findUserByEndpoint(std::shared_ptr<udp::endpoint> tested_endpoint);
+	User* findUserByEndpoint(std::shared_ptr<udp::endpoint> tested_endpoint, bool erase);
+	void logUser(std::shared_ptr<udp::endpoint> new_endpoint, unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE], udp::socket &socket);
 	void start_socket_receive();
-	void route_received_data(udp::endpoint *current_receive_endpoint, unsigned char* receive_buffer);
+	void route_received_data(std::shared_ptr<udp::endpoint> current_receive_endpoint, unsigned char* receive_buffer);
 	void on_socket_receive(const boost::system::error_code& error, std::size_t bytes_transferred);
 	static void orchestrate_object_movements(udp_server* server);
-	void handle_user_state(udp::endpoint *current_receive_endpoint, unsigned char current_receive_buffer[128]);
+	void handle_user_state(std::shared_ptr<udp::endpoint> current_receive_endpoint, unsigned char current_receive_buffer[128]);
 
 public:
 

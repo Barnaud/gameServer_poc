@@ -10,7 +10,7 @@ using boost::asio::ip::udp;
 class User {
 
 public:
-	User(udp::endpoint* endpoint_a, udp::socket* socket_a) :endpoint(endpoint_a), socket(socket_a)
+	User(std::shared_ptr<udp::endpoint> endpoint_a, udp::socket* socket_a) :endpoint(endpoint_a), socket(socket_a)
 	{
 		character = new GameObject();
 		std::cout << "Creating user" << std::endl;
@@ -21,8 +21,8 @@ public:
 		delete character;
 	}
 
-	void setCharacterPosition(point_t new_position);
-	point_t getCharacterPosition();
+	void setCharacterPosition(GameObjectPosition new_position);
+	GameObjectPosition getCharacterPosition();
 	void setCharacterTrajectory(linestring_t new_trajectory);
 	GameObject* getCharacter();
 
@@ -36,9 +36,8 @@ public:
 	time_point_t getLastAckedRequestTimestamp();
 
 private:
-	udp::endpoint* endpoint;
+	std::shared_ptr<udp::endpoint> endpoint;
 	udp::socket* socket;
 	GameObject* character;
-	timed_point_t previous_position;
 	time_point_t lastAckedRequestTimestamp = std::chrono::system_clock::time_point(std::chrono::milliseconds(0)); //Timestamp=0
 };

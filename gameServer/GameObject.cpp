@@ -46,16 +46,16 @@ GameObject::~GameObject() {
 }
 
 
-void GameObject::setPosition(point_t new_position) {
+void GameObject::setPosition(GameObjectPosition new_position) {
 	this->position = new_position;
 }
 
-point_t GameObject::getPosition() {
+GameObjectPosition GameObject::getPosition() {
 	return position;
 }
 
 GameObjectState GameObject::getState() {
-	GameObjectState stateToReturn = GameObjectState();
+	GameObjectState stateToReturn = GameObjectState(position, action);
 	stateToReturn.position = position;
 	return stateToReturn;
 }
@@ -76,9 +76,8 @@ ClientBuffer GameObject::toClientBuffer() {
 
 	ClientBuffer bufferToReturn = ClientBuffer();
 	bufferToReturn.pushBuffer(&uid, sizeof(uid));
-	bufferToReturn.pushPoint(position);
-	bufferToReturn.pushBuffer(&actionId, sizeof(actionId));
-	bufferToReturn.pushBuffer(&actionFrame, sizeof(actionFrame));
+	position.serializeInBuffer(bufferToReturn);
+	action.serializeInBuffer(bufferToReturn);
 	
 	return bufferToReturn;
 }
@@ -125,7 +124,7 @@ void GameObject::moveOneTick(float custom_speed) {
 
 	float moveDistance = custom_speed / tick_rate;
 	//std::cout << "Move distance: " << moveDistance << std::endl;
-	const bool willReachNextPoint = bg::distance(trajectory[0], position) < moveDistance;
+	const bool willReachNextPoint = bg::distance(trajectory[0], position.getValue()) < moveDistance;
 
 	if ( willReachNextPoint && trajectory.size() == 1) {
 		position = trajectory[0];
@@ -137,9 +136,9 @@ void GameObject::moveOneTick(float custom_speed) {
 	}
 	point_t& next_dest = trajectory[0];
 	point_t next_position = next_dest;
-	bg::subtract_point(next_position, position);
-	bg::multiply_value(next_position, ((1.0f / bg::distance(next_dest, position)) * moveDistance));
-	bg::add_point(next_position, position);
+	bg::subtract_point(next_position, position.getValue());
+	bg::multiply_value(next_position, ((1.0f / bg::distance(next_dest, position.getValue()) * moveDistance)));
+	bg::add_point(next_position, position.getValue());
 	position = next_position;
 
 }
