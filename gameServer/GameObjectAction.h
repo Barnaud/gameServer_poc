@@ -9,7 +9,7 @@ private:
 
 public: 
     
-    static const int DataId = 2; 
+    static const char DataId = 2; 
 
     GameObjectAction(unsigned int actionId_a, unsigned int ActionFrame_a) : actionId(actionId_a), actionFrame(ActionFrame_a) {
 

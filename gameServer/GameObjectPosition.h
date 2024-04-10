@@ -8,7 +8,7 @@ private:
     point_t position;
 
 public: 
-    static const int DataId = 1;
+    static const char DataId = 1;
 
     static GameObjectPosition deserialize(unsigned char* positionBytes);
 

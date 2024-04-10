@@ -120,7 +120,7 @@ void udp_server::route_received_data(std::shared_ptr<udp::endpoint> current_rece
 			case clientRequestTypes::clientGetRtt:
 			{
 				//std::cout << "Pause0" << std::endl;
-				auto serverTime = std::chrono::system_clock::now();
+				//auto serverTime = std::chrono::system_clock::now();
 				//auto serverTime = std::chrono::high_resolution_clock::now();
 				//auto serverTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(serverTime.time_since_epoch()).count();
 				long long serverTimeMs = getTimestampMs();
@@ -190,6 +190,7 @@ void udp_server::handle_user_state(std::shared_ptr<udp::endpoint> current_receiv
 
 
 	userToHandle->validateReceivedPosition(received_position.getValue(), requestTime);
+	//TODO: implement per user mutex to prevent orchestrateObjectMovement from conflicting with setCharacterPosition
 	userToHandle->setCharacterPosition(received_position);
 	//TODO:store old positions of the  gameObject somewhere
 
@@ -352,6 +353,7 @@ std::optional<ClientBuffer*> udp_server::formatGameDeltaToSend(User* userToSendS
 		std::optional<StateDelta> oneStateDelta = oneGameObject->getHistory()->getDeltaSince(lastAckedRequest);
 		unsigned int oneUid = oneGameObject->getUid();
 		if (!oneStateDelta.has_value()) {
+			delete bufferToReturn;
 			return std::nullopt;
 		}
 

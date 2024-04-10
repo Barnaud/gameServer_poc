@@ -29,7 +29,7 @@ bool GameObjectPosition::operator!=(const GameObjectPosition& other) const {
 
 void GameObjectPosition::serializeInBuffer(ClientBuffer& buffer, bool includePropertyType) {
     if (includePropertyType) {
-        int positionDataId = GameObjectPosition::DataId;
+        char positionDataId = GameObjectPosition::DataId;
         buffer.pushBuffer(&positionDataId, sizeof(positionDataId));
     }
     buffer.pushPoint(position);

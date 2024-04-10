@@ -19,7 +19,7 @@ bool GameObjectAction::operator!=(const GameObjectAction& other) const {
 
 void GameObjectAction::serializeInBuffer(ClientBuffer& buffer, bool includePropertyType) {
 	if (includePropertyType) {
-		int actionDataId = GameObjectAction::DataId;
+		char actionDataId = GameObjectAction::DataId;
 		buffer.pushBuffer(&actionDataId, sizeof actionDataId);
 	}
 	buffer.pushBuffer(&actionId, sizeof(actionId));
