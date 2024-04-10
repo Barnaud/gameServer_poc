@@ -2,7 +2,8 @@
 #include <vector>
 #include "geometry_typedef.h"
 #include "GameObjectStateHistory.h"
-
+#include "GameObjectPosition.h"
+#include "GameObjectAction.h"
 
 class GameObject
 {
@@ -13,8 +14,8 @@ public:
 	GameObject(point_t position_a, linestring_t trajectory_a);
 	~GameObject();
 
-	void setPosition(point_t new_position);
-	point_t getPosition();
+	void setPosition(GameObjectPosition new_position);
+	GameObjectPosition getPosition();
 
 	GameObjectState getState();
 
@@ -33,13 +34,14 @@ public:
 
 
 private:
-	point_t position = point_t(0, 0);
+	GameObjectPosition position = point_t(0, 0);
 	linestring_t trajectory;
 	float default_speed;
 	unsigned int uid;
 
-	int actionId = 0;
-	int actionFrame = 0;
+	GameObjectAction action = GameObjectAction(0, 0);
+	//int actionId = 0;
+	//int actionFrame = 0;
 
 	void trajectoryPullFront();
 

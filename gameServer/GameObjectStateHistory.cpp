@@ -1,5 +1,19 @@
 #include "GameObjectStateHistory.h"
 
+
+template <typename T>
+void detectAndSaveParameterUpdateInDelta(const T& previousState, const T& currentState, StateDelta& deltaToUpdate, std::optional<T>& currentPropertyValueInDelta) {
+	//static_assert(std::is_base_of<GameObjectProperty, T>, "provided states should be GameObjectProperties");
+	if (currentPropertyValueInDelta != std::nullopt) {
+		return;
+	}
+	if (previousState != currentState) {
+		currentPropertyValueInDelta = currentState;
+		deltaToUpdate.changeType = ChangeType::updated;
+	}
+}
+
+
 std::deque<GameObjectState> GameObjectStateHistory::getStates() const {
 	return states;
 }
@@ -38,15 +52,17 @@ std::optional<StateDelta> GameObjectStateHistory::getDeltaSince(time_point_t ori
 			return stateDeltaToReturn;
 		}
 		if (!thisTickState.isDestroyed) {
-			if (stateDeltaToReturn.newPosition == std::nullopt && !bg::equals(thisTickState.position, previousTickState.position)) {
+			detectAndSaveParameterUpdateInDelta(previousTickState.position, thisTickState.position, stateDeltaToReturn, stateDeltaToReturn.newPosition);
+			detectAndSaveParameterUpdateInDelta(previousTickState.action, thisTickState.action, stateDeltaToReturn, stateDeltaToReturn.newAction);
+			/*if (stateDeltaToReturn.newPosition == std::nullopt && thisTickState.position != previousTickState.position) {
 				stateDeltaToReturn.newPosition = thisTickState.position;
 				stateDeltaToReturn.changeType = ChangeType::updated;
-			}
-			if (stateDeltaToReturn.newActionId == std::nullopt && thisTickState.actionId != previousTickState.actionId) {
+			}*/
+			/*if (stateDeltaToReturn.newActionId == std::nullopt && thisTickState.actionId != previousTickState.actionId) {
 				stateDeltaToReturn.newActionId = thisTickState.actionId;
 				stateDeltaToReturn.newActionFrame = thisTickState.actionId;
 				stateDeltaToReturn.changeType = ChangeType::updated;
-			}
+			}*/
 
 		}
 		observedStateIndex++;
@@ -58,9 +74,8 @@ std::optional<StateDelta> GameObjectStateHistory::getDeltaSince(time_point_t ori
 		if (stateDeltaToReturn.newPosition == std::nullopt) {
 			stateDeltaToReturn.newPosition = states[0].position;
 		}
-		if (stateDeltaToReturn.newActionId == std::nullopt) {
-			stateDeltaToReturn.newActionId = states[0].actionId;
-			stateDeltaToReturn.newActionFrame = states[0].actionId;
+		if (stateDeltaToReturn.newAction == std::nullopt) {
+			stateDeltaToReturn.newAction = states[0].action;
 		}
 	}
 
@@ -97,15 +112,17 @@ ClientBuffer StateDelta::toClientBuffer() {
 	ClientBuffer bufferToReturn = ClientBuffer();
 	bufferToReturn.pushBuffer(&changeType, sizeof(char));
 	if (newPosition != std::nullopt) {
-		char charPositionDataId = (unsigned char)DataId::position;
-		bufferToReturn.pushBuffer(&charPositionDataId, sizeof(char));
-		bufferToReturn.pushPoint(newPosition.value());
+		newPosition.value().serializeInBuffer(bufferToReturn, true);
+		//char charPositionDataId = (unsigned char)DataId::position;
+		//bufferToReturn.pushBuffer(&charPositionDataId, sizeof(char));
+		//bufferToReturn.pushPoint(newPosition.value());
 	}
-	if (newActionId != std::nullopt) {
-		char charActionIdDataId = (unsigned char)DataId::actionId;
-		bufferToReturn.pushBuffer(&charActionIdDataId, sizeof(char));
-		bufferToReturn.pushBuffer(&(newActionId.value()), sizeof(int));
-		bufferToReturn.pushBuffer(&newActionFrame, sizeof(int));
+	if (newAction != std::nullopt) {
+		newPosition.value().serializeInBuffer(bufferToReturn, true);
+		//char charActionIdDataId = (unsigned char)DataId::actionId;
+		//bufferToReturn.pushBuffer(&charActionIdDataId, sizeof(char));
+		//bufferToReturn.pushBuffer(&(newActionId.value()), sizeof(int));
+		//bufferToReturn.pushBuffer(&newActionFrame, sizeof(int));
 	}
 	char endOfObjectDelimiter = 0xff;
 	bufferToReturn.pushBuffer(&endOfObjectDelimiter, sizeof(char));	
