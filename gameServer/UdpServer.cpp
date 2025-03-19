@@ -1,4 +1,4 @@
-#include "udp_server.h"
+#include "UdpServer.h"
 #include <iostream>
 #include "Constants.h"
 #include <chrono>
@@ -37,7 +37,8 @@ enum clientRequestTypes {
 	userLogin=1, 
 	clientGetRtt=2,
 	sendClientState=4,
-	clientAckRequest=5
+	clientAckRequest=5,
+	sendClientAction=6,
 };
 
 enum serverResponseTypes {
@@ -48,7 +49,7 @@ enum serverResponseTypes {
 };
 
 
-udp_server::udp_server(int port) {
+UdpServer::UdpServer(int port) {
 
 	std::cout << "Will init UDP server on port: " << port << std::endl;
 	try {
@@ -60,13 +61,13 @@ udp_server::udp_server(int port) {
 	}
 }
 
-void udp_server::start_listening() {
+void UdpServer::startListening() {
 	std::cout << "Listening to incoming connexions" << std::endl;
 	try {
-		f_orchestration = std::async(std::launch::async, orchestrate_object_movements, this);
+		f_orchestration = std::async(std::launch::async, orchestrateObjectMovements, this);
 		std::cout << "Started orchestration" << std::endl;
 		while (true) {
-			start_socket_receive();
+			startReceivingOnSocket();
 			std::cout << "Stopped3: " << this->context.stopped() << std::endl;
 			this->context.run();
 			std::cout << "Every user left the server, waiting for upcoming connexion "<<this->context.stopped() << std::endl;
@@ -82,13 +83,13 @@ void udp_server::start_listening() {
 	}
 }
 
-void udp_server::start_socket_receive() {
-	this->socket->async_receive_from(boost::asio::buffer(this->receive_buffer), this->receive_endpoint, boost::bind(&udp_server::on_socket_receive, this, boost::asio::placeholders::error,
+void UdpServer::startReceivingOnSocket() {
+	this->socket->async_receive_from(boost::asio::buffer(this->receive_buffer), this->receive_endpoint, boost::bind(&UdpServer::on_socket_receive, this, boost::asio::placeholders::error,
 		boost::asio::placeholders::bytes_transferred));
 
 }
 
-void udp_server::route_received_data(std::shared_ptr<udp::endpoint> current_receive_endpoint, unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE]) {
+void UdpServer::routeReceivedData(std::shared_ptr<udp::endpoint> current_receive_endpoint, unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE]) {
 	//std::cout << "Running route_received_data with " << *current_receive_endpoint << std::endl;
 	if (current_receive_buffer && current_receive_buffer[0]) {
 		switch (current_receive_buffer[0])
@@ -99,7 +100,7 @@ void udp_server::route_received_data(std::shared_ptr<udp::endpoint> current_rece
 				User* foundUser = findUserByEndpoint(current_receive_endpoint);
 				if (foundUser) {
 					char ack_buffer[] = { serverResponseTypes::serverAckRequest, current_receive_buffer[1], current_receive_buffer[2], 0, 0, 0, 0 };
-					// 5 (ACK identifier), receive_buffer[1-2] (request id), characte_uid (int -> 4bytes)
+					// 5 (ACK identifier), receive_buffer[1-2] (request id), character_uid (int -> 4bytes)
 					int characterUid = foundUser->getCharacterUid();
 					memcpy(&ack_buffer[3], &characterUid, 4);
 					this->socket->send_to(boost::asio::buffer(ack_buffer), *current_receive_endpoint); //Ack login request; TODO: Make this a function
@@ -143,7 +144,7 @@ void udp_server::route_received_data(std::shared_ptr<udp::endpoint> current_rece
 			case clientRequestTypes::sendClientState:
 			{
 				//std::cout << "Case 4" << std::endl;
-				udp_server::handle_user_state(current_receive_endpoint, current_receive_buffer);
+				UdpServer::handleUserState(current_receive_endpoint, current_receive_buffer);
 
 			}
 			break;
@@ -157,6 +158,13 @@ void udp_server::route_received_data(std::shared_ptr<udp::endpoint> current_rece
 				}
 			}
 			break;
+			case clientRequestTypes::sendClientAction:
+			{
+				std::cout << "Received sendClientAction from a client" << std::endl;
+				char ack_buffer[] = { serverResponseTypes::serverAckRequest, current_receive_buffer[1], current_receive_buffer[2]};
+				this->socket->send_to(boost::asio::buffer(ack_buffer), *current_receive_endpoint);
+			}
+			break;
 			default:
 				std::cout << "Received unknown request type (" <<(int) current_receive_buffer[0]<< ").ignoring..." << std::endl;
 				break;
@@ -168,7 +176,7 @@ void udp_server::route_received_data(std::shared_ptr<udp::endpoint> current_rece
 
 }
 
-void udp_server::handle_user_state(std::shared_ptr<udp::endpoint> current_receive_endpoint, unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE]) {
+void UdpServer::handleUserState(std::shared_ptr<udp::endpoint> current_receive_endpoint, unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE]) {
 	time_point_t serverTime = std::chrono::system_clock::now();
 
 	User* userToHandle = findUserByEndpoint(current_receive_endpoint);
@@ -197,7 +205,7 @@ void udp_server::handle_user_state(std::shared_ptr<udp::endpoint> current_receiv
 
 }
 
-void udp_server::on_socket_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
+void UdpServer::on_socket_receive(const boost::system::error_code& error, std::size_t bytes_transferred) {
 	
 	std::shared_ptr<udp::endpoint> current_receive_endpoint = std::make_shared<udp::endpoint>(receive_endpoint);
 
@@ -217,8 +225,8 @@ void udp_server::on_socket_receive(const boost::system::error_code& error, std::
 
 		//std::stringstream endpoint_str;
 		//endpoint_str << current_receive_endpoint;
-		route_received_data(current_receive_endpoint, current_receive_buffer);
-		udp_server::start_socket_receive();
+		routeReceivedData(current_receive_endpoint, current_receive_buffer);
+		UdpServer::startReceivingOnSocket();
 	}
 	else {
 		std::cout << "Caught error in socket_receive" << std::endl;
@@ -232,7 +240,7 @@ void udp_server::on_socket_receive(const boost::system::error_code& error, std::
 
 }
 
-void udp_server::orchestrate_object_movements(udp_server* server) {
+void UdpServer::orchestrateObjectMovements(UdpServer* server) {
 	auto tickStartTime = std::chrono::high_resolution_clock::now();
 	//std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 	while (true) {
@@ -258,7 +266,7 @@ void udp_server::orchestrate_object_movements(udp_server* server) {
 	}
 }
 
-User* udp_server::findUserByEndpoint(std::shared_ptr<udp::endpoint> tested_endpoint, bool erase){
+User* UdpServer::findUserByEndpoint(std::shared_ptr<udp::endpoint> tested_endpoint, bool erase){
 	user_mutex.lock();
 	for (size_t i = 0; i < this->users.size(); i++) {
 		//std::cout << "Will compare: " << *tested_endpoint << " With " << this->users[i]->get_endpoint() << std::endl;
@@ -277,15 +285,16 @@ User* udp_server::findUserByEndpoint(std::shared_ptr<udp::endpoint> tested_endpo
 
 }
 
-User* udp_server::findUserByEndpoint(std::shared_ptr<udp::endpoint> tested_endpoint) {
+User* UdpServer::findUserByEndpoint(std::shared_ptr<udp::endpoint> tested_endpoint) {
 	return findUserByEndpoint(tested_endpoint, false);
 }
 
-void udp_server::logUser(std::shared_ptr<udp::endpoint> new_endpoint, unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE], udp::socket& socket) {
+void UdpServer::logUser(std::shared_ptr<udp::endpoint> new_endpoint, unsigned char current_receive_buffer[RECEIVE_BUFFER_SIZE], udp::socket& socket) {
 	user_mutex.lock();
 	User* new_user = new User(new_endpoint, &socket);
 	point_t start_position = point_t(0, 0, 0);
 	new_user->setCharacterPosition(start_position);
+	new_user->getCharacter()->setSkin((unsigned int) 2);
 	/*linestring_t new_trajectory = linestring_t();
 	bg::append(new_trajectory, point_t(0, 0, 10));
 	bg::append(new_trajectory, point_t(5, 0, 5));
@@ -300,7 +309,7 @@ void udp_server::logUser(std::shared_ptr<udp::endpoint> new_endpoint, unsigned c
 }
 
 
-std::vector<unsigned char> udp_server::formatGameStateToSend(User* userToSendStateTo) {
+std::vector<unsigned char> UdpServer::formatGameStateToSend(User* userToSendStateTo) {
 
 	long long serverTimeMs = getTimestampMs();
 	ClientBuffer response = ClientBuffer();
@@ -321,12 +330,11 @@ std::vector<unsigned char> udp_server::formatGameStateToSend(User* userToSendSta
 	std::vector<GameObject*>* allGameObjects = GameObject::getGameObjects();
 
 
-	
 	char request_type = serverResponseTypes::sendServerState;
 	response.pushBuffer(&request_type, sizeof(char));
 	response.pushBuffer(&serverTimeMs, sizeof(serverTimeMs));
 
-	//Data format: requestType[1] = 3, server_timestamp[8], gameObjectId[4], x[4], y[4], z[4], actionId[4], actionFrame[4] => buffer size = (gameObjects.size() * 24) + 9
+	//Data format: requestType[1] = 3, server_timestamp[8], gameObjectId[4], x[4], y[4], z[4], actionId[4], actionFrame[4], skinId[4] => buffer size = (gameObjects.size() * 28) + 9
 	for (GameObject* oneGameObject : *allGameObjects) {
 		ClientBuffer oneObjectBuffer = oneGameObject->toClientBuffer();
 		response.pushBuffer(&oneObjectBuffer);
@@ -338,7 +346,7 @@ std::vector<unsigned char> udp_server::formatGameStateToSend(User* userToSendSta
 //user whole state format: gameObjectId[4], x[4], y[4], z[4], actionId[4], actionFrame[4]
 // delta format: changeType[1] (create, update, delete),(dataType_position[1],  position[12]),(dataType_actionId[1], actionId[4], actionFrame[4]) 0xff
 // Note: 0xff means "end of this gameObject. To prevent colision, dataId 0xff is reserved.
-std::optional<ClientBuffer*> udp_server::formatGameDeltaToSend(User* userToSendStateTo) {
+std::optional<ClientBuffer*> UdpServer::formatGameDeltaToSend(User* userToSendStateTo) {
 
 	ClientBuffer* bufferToReturn = new ClientBuffer();
 	std::vector<GameObject*>* allGameObjects = GameObject::getGameObjects();

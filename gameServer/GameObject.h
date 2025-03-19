@@ -4,6 +4,7 @@
 #include "GameObjectStateHistory.h"
 #include "GameObjectPosition.h"
 #include "GameObjectAction.h"
+#include "GameObjectSkin.h"
 
 class GameObject
 {
@@ -21,6 +22,9 @@ public:
 
 	void setTrajectory(linestring_t new_trajectory);
 	linestring_t getTrajectory();
+
+	GameObjectSkin getSkin() const;
+	void setSkin(unsigned int skinId);
 
 	unsigned int getUid();
 	void moveOneTick();
@@ -40,8 +44,8 @@ private:
 	unsigned int uid;
 
 	GameObjectAction action = GameObjectAction(0, 0);
-	//int actionId = 0;
-	//int actionFrame = 0;
+	GameObjectSkin skin = GameObjectSkin(1);
+
 
 	void trajectoryPullFront();
 

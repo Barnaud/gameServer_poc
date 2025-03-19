@@ -54,6 +54,7 @@ std::optional<StateDelta> GameObjectStateHistory::getDeltaSince(time_point_t ori
 		if (!thisTickState.isDestroyed) {
 			detectAndSaveParameterUpdateInDelta(previousTickState.position, thisTickState.position, stateDeltaToReturn, stateDeltaToReturn.newPosition);
 			detectAndSaveParameterUpdateInDelta(previousTickState.action, thisTickState.action, stateDeltaToReturn, stateDeltaToReturn.newAction);
+			detectAndSaveParameterUpdateInDelta(previousTickState.skin, thisTickState.skin, stateDeltaToReturn, stateDeltaToReturn.newSkin);
 			/*if (stateDeltaToReturn.newPosition == std::nullopt && thisTickState.position != previousTickState.position) {
 				stateDeltaToReturn.newPosition = thisTickState.position;
 				stateDeltaToReturn.changeType = ChangeType::updated;
@@ -118,7 +119,7 @@ ClientBuffer StateDelta::toClientBuffer() {
 		//bufferToReturn.pushPoint(newPosition.value());
 	}
 	if (newAction != std::nullopt) {
-		newPosition.value().serializeInBuffer(bufferToReturn, true);
+		newAction.value().serializeInBuffer(bufferToReturn, true);
 		//char charActionIdDataId = (unsigned char)DataId::actionId;
 		//bufferToReturn.pushBuffer(&charActionIdDataId, sizeof(char));
 		//bufferToReturn.pushBuffer(&(newActionId.value()), sizeof(int));

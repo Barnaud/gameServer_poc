@@ -24,7 +24,7 @@
     <ClCompile Include="main.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="udp_server.cpp">
+    <ClCompile Include="UdpServer.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
     <ClCompile Include="User.cpp">
@@ -51,9 +51,12 @@
     <ClCompile Include="GameObjectAction.cpp">
       <Filter>Fichiers sources\GameObject</Filter>
     </ClCompile>
+    <ClCompile Include="GameObjectSkin.cpp">
+      <Filter>Fichiers sources\GameObject</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="udp_server.h">
+    <ClInclude Include="UdpServer.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="User.h">
@@ -91,6 +94,9 @@
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="GameObjectSkin.h">
+      <Filter>Fichiers d%27en-tête\GameObject</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -7,6 +7,7 @@
 #include "ClientBuffer.h"
 #include "GameObjectPosition.h"
 #include "GameObjectAction.h"
+#include "GameObjectSkin.h"
 
 #define savedStatesCount 255
 
@@ -24,19 +25,20 @@ enum class DataId {
 };
 
 struct GameObjectState  {
-	GameObjectState(const GameObjectPosition position_a, const GameObjectAction action_a): position(position_a), action(action_a)  {
+	GameObjectState(const GameObjectPosition position_a, const GameObjectAction action_a, const GameObjectSkin skin_a): position(position_a), action(action_a), skin(skin_a) {
 	}
 	time_point_t timestamp;
 	bool isDestroyed=false;
 	GameObjectPosition position;
 	GameObjectAction action;
-
+	GameObjectSkin skin;
 };
 
 struct StateDelta {
 	ChangeType changeType = ChangeType::none;
 	std::optional<GameObjectPosition> newPosition = std::nullopt;
 	std::optional<GameObjectAction> newAction = std::nullopt;
+	std::optional<GameObjectSkin> newSkin = std::nullopt;
 
 	ClientBuffer toClientBuffer();
 };

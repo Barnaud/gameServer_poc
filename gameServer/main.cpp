@@ -1,5 +1,5 @@
 #include <iostream>
-#include "udp_server.h"
+#include "UdpServer.h"
 #include "Constants.h"
 
 
@@ -10,8 +10,8 @@ int main()
 
     std::cout << "Starting gameserver" << std::endl;
     try {
-        udp_server my_udp_server(server_port);
-        my_udp_server.start_listening();
+        UdpServer myUdpServer(server_port);
+        myUdpServer.startListening();
         
 
     }

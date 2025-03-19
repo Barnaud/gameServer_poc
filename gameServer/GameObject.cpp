@@ -12,29 +12,30 @@ GameObject::GameObject() {
 	std::cout << "Newly created gameObject uid is: " << uid << std::endl;
 	position = point_t(0, 0, 0);
 	trajectory = linestring_t();
+	skin = GameObjectSkin(0);
 	default_speed = 1;
 	gameObjects.push_back(this);
 	std::cout << "Gameobjects size: " << gameObjects.size();
 
 	//GameObject(point_t(0, 0, 0), linestring_t());
 }
-GameObject::GameObject(point_t position_a) : position(position_a)
-{
-	std::cout << "Creating GameObject 2" << std::endl;
-	uid = ++max_uid;
-	trajectory = linestring_t();
-	default_speed = 1;
-	gameObjects.push_back(this);
-	//GameObject(position_a, linestring_t());
-
-}
-GameObject::GameObject(point_t position_a, linestring_t trajectory_a) : position(position_a), trajectory(trajectory_a)
-{
-	std::cout << "Creating GameObject 3" << std::endl;
-	uid = ++max_uid;
-	default_speed = 1;
-	gameObjects.push_back(this);
-}
+//GameObject::GameObject(point_t position_a) : position(position_a)
+//{
+//	std::cout << "Creating GameObject 2" << std::endl;
+//	uid = ++max_uid;
+//	trajectory = linestring_t();
+//	default_speed = 1;
+//	gameObjects.push_back(this);
+//	//GameObject(position_a, linestring_t());
+//
+//}
+//GameObject::GameObject(point_t position_a, linestring_t trajectory_a) : position(position_a), trajectory(trajectory_a)
+//{
+//	std::cout << "Creating GameObject 3" << std::endl;
+//	uid = ++max_uid;
+//	default_speed = 1;
+//	gameObjects.push_back(this);
+//}
 GameObject::~GameObject() {
 	//std::cout << "Deleting gameObject" << std::endl;
 	for (auto it = GameObject::gameObjects.begin(); it != GameObject::gameObjects.end(); it++) {
@@ -55,7 +56,7 @@ GameObjectPosition GameObject::getPosition() {
 }
 
 GameObjectState GameObject::getState() {
-	GameObjectState stateToReturn = GameObjectState(position, action);
+	GameObjectState stateToReturn = GameObjectState(position, action, skin);
 	stateToReturn.position = position;
 	return stateToReturn;
 }
@@ -68,6 +69,14 @@ linestring_t GameObject::getTrajectory() {
 	return trajectory;
 }
 
+GameObjectSkin GameObject::getSkin() const{
+	return skin;
+}
+
+void GameObject::setSkin(unsigned int newSkinId) {
+	skin = GameObjectSkin(newSkinId);
+}
+
 unsigned int GameObject::getUid() {
 	return uid;
 }
@@ -78,6 +87,7 @@ ClientBuffer GameObject::toClientBuffer() {
 	bufferToReturn.pushBuffer(&uid, sizeof(uid));
 	position.serializeInBuffer(bufferToReturn);
 	action.serializeInBuffer(bufferToReturn);
+	skin.serializeInBuffer(bufferToReturn);
 	
 	return bufferToReturn;
 }
